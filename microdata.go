@@ -144,13 +144,13 @@ func (p *Parser) Parse() (*Microdata, error) {
 				itemref = strings.TrimSpace(itemref)
 
 				if refnode, exists := p.identifiedNodes[itemref]; exists {
-					p.readItem(item, refnode)
+					p.readItem(item, refnode, nil)
 				}
 			}
 		}
 
 		for child := node.FirstChild; child != nil; {
-			p.readItem(item, child)
+			p.readItem(item, child, nil)
 			child = child.NextSibling
 		}
 	}
@@ -158,7 +158,27 @@ func (p *Parser) Parse() (*Microdata, error) {
 	return p.data, nil
 }
 
-func (p *Parser) readItem(item *Item, node *html.Node) {
+func (p *Parser) readItem(item *Item, node *html.Node, ids []string) {
+	if ids == nil {
+		ids = []string{}
+	}
+	id, _ := getAttr("id", node)
+	if len(ids) > 0 {
+		for _, v := range ids {
+			if v == id {
+				return
+			} else {
+				if id != "" {
+					ids = append(ids, id)
+				}
+			}
+		}
+	} else {
+		if id != "" {
+			ids = append(ids, id)
+		}
+	}
+
 	if itemprop, exists := getAttr("itemprop", node); exists {
 		if _, exists := getAttr("itemscope", node); exists {
 			subitem := NewItem()
@@ -168,13 +188,13 @@ func (p *Parser) readItem(item *Item, node *html.Node) {
 					itemref = strings.TrimSpace(itemref)
 
 					if refnode, exists := p.identifiedNodes[itemref]; exists {
-						p.readItem(subitem, refnode)
+						p.readItem(subitem, refnode, ids)
 					}
 				}
 			}
 
 			for child := node.FirstChild; child != nil; {
-				p.readItem(subitem, child)
+				p.readItem(subitem, child, ids)
 				child = child.NextSibling
 			}
 
@@ -233,8 +253,9 @@ func (p *Parser) readItem(item *Item, node *html.Node) {
 			propertyValue = text.String()
 		}
 
-		if len(propertyValue) > 0 {
-			for _, propertyName := range strings.Split(strings.TrimSpace(itemprop), " ") {
+		if len(propertyValue) > 0 && len(propertyValue) < 10000 {
+			trimmed := strings.TrimSpace(itemprop)
+			for _, propertyName := range strings.Split(trimmed, " ") {
 				propertyName = strings.TrimSpace(propertyName)
 				if propertyName != "" {
 					item.AddString(propertyName, propertyValue)
@@ -245,7 +266,7 @@ func (p *Parser) readItem(item *Item, node *html.Node) {
 	}
 
 	for child := node.FirstChild; child != nil; {
-		p.readItem(item, child)
+		p.readItem(item, child, ids)
 		child = child.NextSibling
 	}
 

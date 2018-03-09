@@ -387,6 +387,11 @@ func TestParseItemRef(t *testing.T) {
 
 }
 
+func TestParseCircularItemRef(t *testing.T) {
+	html := `<div itemscope="" id="siteSchema"><span itemprop="address" itemscope="" itemref="siteSchema"></div>`
+	ParseData(html, t)
+}
+
 func TestParseSharedItemRef(t *testing.T) {
 	html := `<!DOCTYPE HTML>
 		<html>
